@@ -19,11 +19,33 @@ def get_user_input
 end
 
 def add_time_off
-  vacation_dates = {}
+  puts "What would you like to name your vacation?"
+  name = get_user_input
   puts "Please enter the start date of your vacation as dd/mm/yyyy:"
-  start = Time.strptime(get_user_input,"%d/%m/%Y")
+  start = Date.strptime(get_user_input,"%d/%m/%Y")
   puts "Please enter the end date of your vacation as dd/mm/yyyy:"
-  finish = Time.strptime(get_user_input,"%d/%m/%Y")
+  finish = Date.strptime(get_user_input,"%d/%m/%Y")
+  if (finish-start).to_i <= 1
+    $vacation_cal[start.yday] = {
+      name: name,
+      date: start,
+      holiday: false,
+      pto_hours: -8
+    }
+  else
+    temp=*(start.yday..finish.yday)
+    temp.each do |day|
+      $vacation_cal[day] = {
+        name: name,
+        date: Date.strptime(day.to_s,"%j"),
+        holiday: false,
+        pto_hours: -8
+      }
+      if $vacation_cal[day][:date].saturday? || $vacation_cal[day][:date].sunday?
+        $vacation_cal[day][:pto_hours] = 0
+      end
+    end
+  end
 end
 
 def generate_initial_calendar
@@ -88,7 +110,7 @@ def generate_initial_calendar
 end
 
 def show_calendar
-  $vacation_cal.each do |day_of_year, holidays_info|
+  $vacation_cal.sort.each do |day_of_year, holidays_info|
     puts "#{holidays_info[:name]}: #{holidays_info[:date].strftime("%d %b %Y")} | PTO Hours: " + (holidays_info[:pto_hours] <= 0 ? "#{holidays_info[:pto_hours].abs.to_s} spent" : "#{holidays_info[:pto_hours].abs.to_s} accrued")
   end
 end
@@ -102,7 +124,7 @@ def listen
     when "help"
       help
     when "new"
-      #run add_time_off
+      add_time_off
     when "show"
       show_calendar
     when "config"
@@ -121,8 +143,8 @@ def listen
 end
 
 def runner
-  help
   $vacation_cal = generate_initial_calendar
+  help
   listen
 end
 
